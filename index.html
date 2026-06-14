@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Compás</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── Theme variables (shared with Interleaves) ───────────────────────────── */
+:root {
+  --bg:        #FFFFFF;
+  --bg2:       #F0F6FF;
+  --bg3:       #DFF0FA;
+  --chrome:    #2A6496;
+  --ink:       #1A2B3C;
+  --ink2:      #4A6278;
+  --ink3:      #7A9AB2;
+  --accent:    #2A6496;
+  --accent2:   #1A4F7A;
+  --accent-fg: #FFFFFF;
+  --red:       #8b2c2c;
+  --border:    rgba(42,100,150,0.15);
+  --border2:   rgba(42,100,150,0.28);
+  --radius: 4px;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-serif: 'Spectral', serif;
+}
+html.warm {
+  --bg:        #F5F0E8;
+  --bg2:       #EDE7D9;
+  --bg3:       #E2DBD0;
+  --chrome:    #2C2C2C;
+  --ink:       #2C2C2C;
+  --ink2:      #6B6459;
+  --ink3:      #9B9189;
+  --accent:    #2C2C2C;
+  --accent2:   #444444;
+  --accent-fg: #FFFFFF;
+  --red:       #8b2c2c;
+  --border:    rgba(44,44,44,0.18);
+  --border2:   rgba(44,44,44,0.28);
+}
+html.clean-white {
+  --bg:        #ffffff;
+  --bg2:       #fafafa;
+  --bg3:       #f0f0f0;
+  --chrome:    #222222;
+  --ink:       #000000;
+  --ink2:      #333333;
+  --ink3:      #666666;
+  --accent:    #000000;
+  --accent2:   #333333;
+  --accent-fg: #ffffff;
+  --border:    rgba(0,0,0,0.15);
+  --border2:   rgba(0,0,0,0.25);
+}
+html.pure-white {
+  --bg:        #ffffff;
+  --bg2:       #ffffff;
+  --bg3:       #f5f5f5;
+  --chrome:    #ffffff;
+  --ink:       #000000;
+  --ink2:      #333333;
+  --ink3:      #888888;
+  --accent:    #000000;
+  --accent2:   #333333;
+  --accent-fg: #ffffff;
+  --border:    #000000;
+  --border2:   #000000;
+  --hatch: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+}
+html.eink {
+  --bg:        #ffffff;
+  --bg2:       #f0f0f0;
+  --bg3:       #e0e0e0;
+  --chrome:    #ffffff;
+  --ink:       #000000;
+  --ink2:      #222222;
+  --ink3:      #444444;
+  --accent:    #000000;
+  --accent2:   #333333;
+  --accent-fg: #ffffff;
+  --red:       #000000;
+  --border:    #000000;
+  --border2:   #000000;
+  --radius:    2px;
+}
+html.eink *, html.eink *::before, html.eink *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ── Base / layout ────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* ── Theme picker ─────────────────────────────────────────────────────────── */
+#theme-picker-wrap { position: fixed; top: 14px; right: 14px; z-index: 10; }
+#theme-pick {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink2);
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  cursor: pointer;
+}
+#theme-pick option { background: #fff; color: #000; }
+html.eink #theme-pick { color: #000; background: #f0f0f0; border-color: #999; }
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+#compas-card {
+  width: min(92vw, 380px);
+  background: var(--chrome);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  padding: 30px 22px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+html.eink #compas-card { background: #fff; border-color: #999; box-shadow: none; }
+html.pure-white #compas-card { background: #fff; border: 2px solid #000; box-shadow: none; }
+
+#compas-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: .04em;
+}
+html.eink #compas-title { color: #000; }
+html.pure-white #compas-title { color: #000; }
+
+/* ── BPM display ──────────────────────────────────────────────────────────── */
+#bpm-display { display: flex; align-items: baseline; gap: 6px; }
+#bpm-input {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  width: 116px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+  cursor: text;
+}
+#bpm-input::-webkit-outer-spin-button, #bpm-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+#bpm-input:focus { border-bottom-color: rgba(255,255,255,0.8); }
+#bpm-unit {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+html.eink #bpm-input { color: #000; border-bottom-color: #000; }
+html.eink #bpm-unit { color: #666; }
+html.pure-white #bpm-input { color: #000; border-bottom-color: #000; }
+html.pure-white #bpm-unit { color: #555; }
+
+/* ── Dial ─────────────────────────────────────────────────────────────────── */
+#dial-wrap { display: flex; align-items: center; justify-content: center; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
+#dial { width: min(74vw, 280px); height: min(74vw, 280px); display: block; user-select: none; -webkit-user-select: none; }
+html.eink #dial circle { stroke: #ccc; }
+html.eink #dial-needle { stroke: #000; }
+html.eink #dial text { fill: #000 !important; }
+html.eink #dial line { stroke: #000 !important; }
+html.eink #small-ticks line { stroke: rgba(0,0,0,0.35) !important; }
+html.pure-white #dial circle { stroke: #999; }
+html.pure-white #dial line { stroke: #000 !important; }
+html.pure-white #dial text { fill: #000 !important; }
+html.pure-white #dial-needle { stroke: #000 !important; }
+
+/* ── Beat count buttons ───────────────────────────────────────────────────── */
+#beats-row { display: flex; gap: 6px; width: 100%; }
+.beat-btn {
+  flex: 1; height: 46px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: rgba(255,255,255,0.7);
+  display: flex; align-items: center; justify-content: center;
+}
+.beat-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.beat-btn.active { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.6); }
+html.eink .beat-btn { background: #f0f0f0; border-color: #999; color: #000; }
+html.eink .beat-btn.active { background: #000; color: #fff; border-color: #000; }
+html.pure-white .beat-btn { background: #fff; border: 1.5px solid #000; color: #000; }
+html.pure-white .beat-btn.active { background: var(--hatch); color: #000; border-color: #000; font-weight: 700; }
+
+/* ── Accent grid ──────────────────────────────────────────────────────────── */
+#accent-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; min-height: 38px; align-items: center; }
+.accent-btn {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.08);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.accent-btn:hover { background: rgba(255,255,255,0.18); }
+.accent-btn.beat1 { background: rgba(255,255,255,0.9); color: #000; border-color: #fff; cursor: default; }
+.accent-btn.accented { background: rgba(255,255,255,0.45); color: #fff; border-color: rgba(255,255,255,0.8); }
+html.eink .accent-btn { border-color: #999; background: #f0f0f0; color: #000; }
+html.eink .accent-btn.accented { background: #000; color: #fff; border-color: #000; }
+html.eink .accent-btn.beat1 { background: #000; color: #fff; border-color: #000; }
+html.pure-white .accent-btn { background: #fff; border: 2px solid #000; color: #000; }
+html.pure-white .accent-btn.beat1 { background: #000; color: #fff; }
+html.pure-white .accent-btn.accented { background: var(--hatch); }
+
+/* ── Tap / Start controls ─────────────────────────────────────────────────── */
+#controls-row { display: flex; gap: 10px; width: 100%; }
+#tap-btn, #start-btn {
+  flex: 1; height: 52px;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+}
+#tap-btn:hover, #start-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+#start-btn.running { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.6); }
+html.eink #tap-btn, html.eink #start-btn { background: #f0f0f0; border-color: #999; color: #000; }
+html.eink #start-btn.running { background: #000; color: #fff; }
+html.pure-white #tap-btn, html.pure-white #start-btn { background: #fff; border: 1.5px solid #000; color: #000; }
+html.pure-white #start-btn.running { background: var(--hatch); color: #000; }
+</style>
+</head>
+<body>
+
+<div id="theme-picker-wrap">
+  <select id="theme-pick" onchange="Compas.setTheme(this.value)">
+    <option value="default">Ocean</option>
+    <option value="warm">Warm</option>
+    <option value="eink">E-ink</option>
+    <option value="white">B&amp;W</option>
+    <option value="purewhite">Clean White</option>
+  </select>
+</div>
+
+<div id="compas-card">
+  <div id="compas-title">Compás</div>
+
+  <div id="bpm-display">
+    <input id="bpm-input" type="number" min="40" max="208" value="120"
+           onchange="Compas.setBPM(+this.value)"
+           oninput="Compas.setBPM(+this.value)">
+    <span id="bpm-unit">bpm</span>
+  </div>
+
+  <div id="dial-wrap">
+    <svg id="dial" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+      <line x1="42.0" y1="158.0" x2="47.7" y2="152.3" stroke="rgba(255,255,255,0.9)" stroke-width="2.5"/>
+      <line x1="24.2" y1="68.6"  x2="31.6" y2="71.7"  stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+      <line x1="100"  y1="18"    x2="100"  y2="26"    stroke="rgba(255,255,255,0.9)" stroke-width="2.5"/>
+      <line x1="175.8" y1="68.6" x2="168.4" y2="71.7" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+      <line x1="158.0" y1="158.0" x2="152.3" y2="152.3" stroke="rgba(255,255,255,0.9)" stroke-width="2.5"/>
+      <g id="small-ticks"></g>
+      <text x="57.6"  y="145.9" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="monospace">40</text>
+      <text x="44.6"  y="80.5"  text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="monospace">82</text>
+      <text x="100"   y="43.5"  text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="monospace">124</text>
+      <text x="155.4" y="80.5"  text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="monospace">166</text>
+      <text x="142.4" y="145.9" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="monospace">208</text>
+      <line id="dial-needle" x1="100" y1="100" x2="100" y2="22"
+        stroke="rgba(255,255,255,0.95)" stroke-width="2.5" stroke-linecap="round"
+        transform="rotate(-135 100 100)"/>
+      <circle cx="100" cy="100" r="4" fill="rgba(255,255,255,0.9)"/>
+    </svg>
+  </div>
+
+  <div id="beats-row">
+    <button class="beat-btn" onclick="Compas.toggleBeats(2)">2</button>
+    <button class="beat-btn" onclick="Compas.toggleBeats(3)">3</button>
+    <button class="beat-btn active" onclick="Compas.toggleBeats(4)">4</button>
+    <button class="beat-btn" onclick="Compas.toggleBeats(5)">5</button>
+    <button class="beat-btn" onclick="Compas.toggleBeats(6)">6</button>
+    <button class="beat-btn" onclick="Compas.toggleBeats(7)">7</button>
+  </div>
+
+  <div id="accent-row"></div>
+
+  <div id="controls-row">
+    <button id="tap-btn" onclick="Compas.tap()">tap</button>
+    <button id="start-btn" onclick="Compas.toggle()">start</button>
+  </div>
+</div>
+
+<script>
+const Compas = (function () {
+  const MIN_BPM = 40, MAX_BPM = 208;
+  const LOOKAHEAD = 0.1;   // seconds to schedule ahead
+  const INTERVAL = 25;     // ms between scheduler checks
+
+  let audioCtx = null;
+  let bpm = 120;
+  let beatsPerBar = 4;
+  let freeClick = false;
+  let accents = [true, false, false, false];
+  let running = false;
+  let currentBeat = 0;
+  let nextNoteTime = 0;
+  let scheduleTimer = null;
+  let tapTimes = [];
+
+  // ── Audio ────────────────────────────────────────────────
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function scheduleBeat(beatNum, time) {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const isBeat1 = !freeClick && beatNum === 0;
+    const isAccent = !freeClick && !isBeat1 && (accents[beatNum] || false);
+
+    if (isBeat1) {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1480, time);
+      osc.frequency.exponentialRampToValueAtTime(740, time + 0.06);
+      gain.gain.setValueAtTime(0.7, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+      osc.start(time);
+      osc.stop(time + 0.13);
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(2220, time);
+      osc2.frequency.exponentialRampToValueAtTime(1110, time + 0.04);
+      gain2.gain.setValueAtTime(0.25, time);
+      gain2.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+      osc2.start(time); osc2.stop(time + 0.07);
+    } else if (isAccent) {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1100, time);
+      osc.frequency.exponentialRampToValueAtTime(880, time + 0.03);
+      gain.gain.setValueAtTime(0.45, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+      osc.start(time);
+      osc.stop(time + 0.07);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, time);
+      gain.gain.setValueAtTime(0.3, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      osc.start(time);
+      osc.stop(time + 0.05);
+    }
+    const delay = Math.max(0, (time - ctx.currentTime) * 1000);
+    setTimeout(() => flashBeat(beatNum), delay);
+  }
+
+  function flashBeat(beatNum) {
+    if (document.documentElement.classList.contains('eink')) return;
+    const dots = document.querySelectorAll('.accent-btn');
+    if (dots[beatNum]) {
+      dots[beatNum].style.opacity = '0.4';
+      setTimeout(() => { if (dots[beatNum]) dots[beatNum].style.opacity = ''; }, 100);
+    }
+  }
+
+  function scheduler() {
+    const ctx = getCtx();
+    while (nextNoteTime < ctx.currentTime + LOOKAHEAD) {
+      scheduleBeat(currentBeat, nextNoteTime);
+      nextNoteTime += 60.0 / bpm;
+      currentBeat = (freeClick || beatsPerBar === 0) ? 0 : (currentBeat + 1) % beatsPerBar;
+    }
+  }
+
+  function start() {
+    const ctx = getCtx();
+    running = true;
+    currentBeat = 0;
+    nextNoteTime = ctx.currentTime + 0.05;
+    scheduleTimer = setInterval(scheduler, INTERVAL);
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'stop';
+    btn.classList.add('running');
+  }
+
+  function stop() {
+    running = false;
+    clearInterval(scheduleTimer);
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'start';
+    btn.classList.remove('running');
+  }
+
+  function toggle() { running ? stop() : start(); }
+
+  // ── BPM / dial ───────────────────────────────────────────
+  function updateBPMDisplay() {
+    const input = document.getElementById('bpm-input');
+    if (input && document.activeElement !== input) input.value = bpm;
+    const pct = (bpm - MIN_BPM) / (MAX_BPM - MIN_BPM);
+    const angle = pct * 270 - 135;
+    document.getElementById('dial-needle').setAttribute('transform', 'rotate(' + angle + ' 100 100)');
+  }
+
+  function setBPM(val) {
+    if (isNaN(val)) return;
+    bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, Math.round(val)));
+    updateBPMDisplay();
+    saveSettings();
+  }
+
+  function angleFromEvent(e, dial) {
+    const rect = dial.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const src = e.touches ? e.touches[0] : e;
+    return Math.atan2(src.clientY - cy, src.clientX - cx);
+  }
+
+  function bpmFromAngle(angle) {
+    let deg = angle * 180 / Math.PI;
+    let clockDeg = (deg + 90 + 360) % 360;
+    let sweep = (clockDeg - 225 + 360) % 360;
+    if (sweep > 270) sweep = sweep > 315 ? 0 : 270;
+    const pct = sweep / 270;
+    return Math.round(MIN_BPM + pct * (MAX_BPM - MIN_BPM));
+  }
+
+  function initDial() {
+    let dragging = false;
+    const wrap = document.getElementById('dial-wrap');
+
+    function onDown(e) {
+      if (!wrap.contains(e.target)) return;
+      dragging = true;
+      setBPM(bpmFromAngle(angleFromEvent(e, wrap)));
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      setBPM(bpmFromAngle(angleFromEvent(e, wrap)));
+    }
+    function onUp() { dragging = false; }
+
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchstart', onDown, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onUp);
+  }
+
+  // ── Tap tempo ────────────────────────────────────────────
+  function tap() {
+    const now = Date.now();
+    if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 2000) tapTimes = [];
+    tapTimes.push(now);
+    if (tapTimes.length > 6) tapTimes.shift();
+    if (tapTimes.length >= 2) {
+      let total = 0;
+      for (let i = 1; i < tapTimes.length; i++) total += tapTimes[i] - tapTimes[i - 1];
+      const avg = total / (tapTimes.length - 1);
+      setBPM(60000 / avg);
+    }
+  }
+
+  // ── Dial ticks ───────────────────────────────────────────
+  function renderTicks() {
+    const group = document.getElementById('small-ticks');
+    if (!group) return;
+    const labeled = new Set([40, 82, 124, 166, 208]);
+    let svg = '';
+    for (let b = 40; b <= 208; b += 2) {
+      if (labeled.has(b)) continue;
+      const pct = (b - MIN_BPM) / (MAX_BPM - MIN_BPM);
+      const angle = (pct * 270 - 135) * Math.PI / 180;
+      const x1 = 100 + 82 * Math.sin(angle);
+      const y1 = 100 - 82 * Math.cos(angle);
+      const x2 = 100 + 79 * Math.sin(angle);
+      const y2 = 100 - 79 * Math.cos(angle);
+      svg += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>';
+    }
+    group.innerHTML = svg;
+  }
+
+  // ── Beats / accents ──────────────────────────────────────
+  function setBeats(n) {
+    beatsPerBar = n;
+    freeClick = false;
+    const prev = accents;
+    accents = Array.from({ length: n }, (_, i) => i === 0 ? true : (prev[i] || false));
+    currentBeat = 0;
+    document.querySelectorAll('.beat-btn').forEach(btn => {
+      btn.classList.toggle('active', +btn.textContent === n);
+    });
+    renderAccents();
+    saveSettings();
+  }
+
+  function toggleBeats(n) {
+    const wasActive = beatsPerBar === n && !freeClick;
+    if (wasActive) {
+      freeClick = true;
+      beatsPerBar = 0;
+      document.querySelectorAll('.beat-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('accent-row').innerHTML = '';
+      saveSettings();
+      return;
+    }
+    setBeats(n);
+  }
+
+  function toggleAccent(beat) {
+    if (beat === 0) return;
+    accents[beat] = !accents[beat];
+    renderAccents();
+    saveSettings();
+  }
+
+  function renderAccents() {
+    const row = document.getElementById('accent-row');
+    row.innerHTML = '';
+    for (let i = 0; i < beatsPerBar; i++) {
+      const btn = document.createElement('button');
+      if (i === 0) {
+        btn.className = 'accent-btn beat1';
+        btn.textContent = '1';
+        btn.title = 'downbeat';
+      } else {
+        btn.className = 'accent-btn' + (accents[i] ? ' accented' : '');
+        btn.textContent = (i + 1).toString();
+        btn.onclick = () => toggleAccent(i);
+      }
+      row.appendChild(btn);
+    }
+  }
+
+  // ── Theme ────────────────────────────────────────────────
+  function setTheme(t) {
+    const html = document.documentElement;
+    html.classList.remove('eink', 'warm', 'clean-white', 'pure-white');
+    if (t === 'eink') html.classList.add('eink');
+    if (t === 'warm') html.classList.add('warm');
+    if (t === 'white') html.classList.add('clean-white');
+    if (t === 'purewhite') html.classList.add('pure-white');
+    localStorage.setItem('theme', t);
+    const pick = document.getElementById('theme-pick');
+    if (pick) pick.value = t;
+  }
+
+  function initTheme() {
+    const stored = localStorage.getItem('theme');
+    if (stored) setTheme(stored);
+    else if (window.matchMedia('(prefers-contrast: more)').matches) setTheme('eink');
+    else setTheme('default');
+  }
+
+  // ── Persistence ──────────────────────────────────────────
+  function saveSettings() {
+    localStorage.setItem('compas_settings', JSON.stringify({ bpm, beatsPerBar, accents, freeClick }));
+  }
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem('compas_settings');
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.bpm) bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, s.bpm));
+      if (s.beatsPerBar) beatsPerBar = s.beatsPerBar;
+      if (Array.isArray(s.accents)) accents = s.accents;
+      if (typeof s.freeClick === 'boolean') freeClick = s.freeClick;
+    } catch (e) {}
+  }
+
+  // ── Init ─────────────────────────────────────────────────
+  function init() {
+    initTheme();
+    loadSettings();
+    updateBPMDisplay();
+    renderTicks();
+    if (freeClick) {
+      document.querySelectorAll('.beat-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('accent-row').innerHTML = '';
+    } else {
+      document.querySelectorAll('.beat-btn').forEach(btn => {
+        btn.classList.toggle('active', +btn.textContent === beatsPerBar);
+      });
+      renderAccents();
+    }
+    initDial();
+  }
+
+  return { setTheme, setBPM, toggle, tap, toggleBeats, init };
+})();
+
+Compas.init();
+</script>
+</body>
+</html>
