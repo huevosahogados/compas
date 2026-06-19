@@ -330,6 +330,7 @@ const Compas = (function () {
   let nextNoteTime = 0;
   let scheduleTimer = null;
   let tapTimes = [];
+  let beat1mode = 'downbeat'; // 'downbeat' | 'accent' | 'plain'
 
   // ── Audio ────────────────────────────────────────────────
   function getCtx() {
@@ -344,34 +345,35 @@ const Compas = (function () {
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
-    const isBeat1 = !freeClick && beatNum === 0;
-    const isAccent = !freeClick && !isBeat1 && (accents[beatNum] || false);
+    const isBeat1 = !freeClick && beatNum === 0 && beat1mode === 'downbeat';
+    const isAccent = !freeClick && beatNum === 0
+      ? beat1mode === 'accent'
+      : !freeClick && (accents[beatNum] || false);
 
     if (isBeat1) {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1480, time);
-      osc.frequency.exponentialRampToValueAtTime(740, time + 0.06);
-      gain.gain.setValueAtTime(0.7, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+      const freq = 1800;
+      const dur = 0.5;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(0.55, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
       osc.start(time);
-      osc.stop(time + 0.13);
+      osc.stop(time + dur);
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.connect(gain2); gain2.connect(ctx.destination);
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(2220, time);
-      osc2.frequency.exponentialRampToValueAtTime(1110, time + 0.04);
-      gain2.gain.setValueAtTime(0.25, time);
-      gain2.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
-      osc2.start(time); osc2.stop(time + 0.07);
+      osc2.frequency.setValueAtTime(freq * 2.76, time);
+      gain2.gain.setValueAtTime(0.18, time);
+      gain2.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.4);
+      osc2.start(time); osc2.stop(time + dur * 0.4);
     } else if (isAccent) {
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(1100, time);
-      osc.frequency.exponentialRampToValueAtTime(880, time + 0.03);
-      gain.gain.setValueAtTime(0.45, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+      osc.frequency.setValueAtTime(1320, time);
+      gain.gain.setValueAtTime(0.35, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
       osc.start(time);
-      osc.stop(time + 0.07);
+      osc.stop(time + 0.05);
     } else {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(880, time);
@@ -539,6 +541,12 @@ const Compas = (function () {
     setBeats(n);
   }
 
+  function toggleBeat1() {
+    beat1mode = beat1mode === 'downbeat' ? 'accent' : beat1mode === 'accent' ? 'plain' : 'downbeat';
+    renderAccents();
+    saveSettings();
+  }
+
   function toggleAccent(beat) {
     if (beat === 0) return;
     accents[beat] = !accents[beat];
@@ -552,9 +560,10 @@ const Compas = (function () {
     for (let i = 0; i < beatsPerBar; i++) {
       const btn = document.createElement('button');
       if (i === 0) {
-        btn.className = 'accent-btn beat1';
+        btn.className = 'accent-btn' + (beat1mode === 'downbeat' ? ' beat1' : beat1mode === 'accent' ? ' accented' : '');
         btn.textContent = '1';
-        btn.title = 'downbeat';
+        btn.title = 'downbeat: click to cycle';
+        btn.onclick = toggleBeat1;
       } else {
         btn.className = 'accent-btn' + (accents[i] ? ' accented' : '');
         btn.textContent = (i + 1).toString();
@@ -586,7 +595,7 @@ const Compas = (function () {
 
   // ── Persistence ──────────────────────────────────────────
   function saveSettings() {
-    localStorage.setItem('compas_settings', JSON.stringify({ bpm, beatsPerBar, accents, freeClick }));
+    localStorage.setItem('compas_settings', JSON.stringify({ bpm, beatsPerBar, accents, freeClick, beat1mode }));
   }
 
   function loadSettings() {
@@ -598,6 +607,7 @@ const Compas = (function () {
       if (s.beatsPerBar) beatsPerBar = s.beatsPerBar;
       if (Array.isArray(s.accents)) accents = s.accents;
       if (typeof s.freeClick === 'boolean') freeClick = s.freeClick;
+      if (s.beat1mode) beat1mode = s.beat1mode;
     } catch (e) {}
   }
 
