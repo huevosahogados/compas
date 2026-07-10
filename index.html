@@ -137,14 +137,19 @@ html.eink #compas-card { background: #fff; border-color: #999; box-shadow: none;
 html.pure-white #compas-card { background: #fff; border: 2px solid #000; box-shadow: none; }
 
 #compas-title {
-  font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.92);
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 9vw, 38px);
+  font-weight: 600;
+  color: rgba(255,255,255,0.22);
   letter-spacing: .04em;
+  text-transform: uppercase;
+  width: 100%;
+  text-align: justify;
+  text-align-last: justify;
+  line-height: 1;
 }
-html.eink #compas-title { color: #000; }
-html.pure-white #compas-title { color: #000; }
+html.eink #compas-title { color: #ccc; }
+html.pure-white #compas-title { color: #ccc; }
 
 /* ── BPM display ──────────────────────────────────────────────────────────── */
 #bpm-display { display: flex; align-items: baseline; gap: 6px; }
@@ -267,7 +272,7 @@ html.pure-white #start-btn.running { background: var(--hatch); color: #000; }
 </div>
 
 <div id="compas-card">
-  <div id="compas-title">Compás</div>
+  <div id="compas-title">C O M P Á S</div>
 
   <div id="bpm-display">
     <input id="bpm-input" type="number" min="40" max="208" value="120"
