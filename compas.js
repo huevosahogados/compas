@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Compás — shared metronome module.
 //
-// Used by both interleaves_v2.html (mounted as a floating panel) and
+// Used by both interleave-test.html (mounted as a floating panel) and
 // compas.html (mounted as a standalone full-page instance). This file owns
 // all metronome behavior: the audio scheduler, the dial, tap tempo, accent
 // patterns, and localStorage persistence of the last-used settings.

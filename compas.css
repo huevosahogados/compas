@@ -1,6 +1,6 @@
 /* Compás — base panel styles (neutral dark theme). Host pages may layer their
    own theme overrides on top by loading their stylesheet AFTER this one and
-   targeting the same #metro-* ids — see interleaves_v2.html for an example
+   targeting the same #metro-* ids — see interleave-test.html for an example
    (its E-ink / Clean White overrides are unchanged by this extraction). */
 
 #metro-panel{display:none;position:fixed;bottom:20px;right:20px;width:260px;background:var(--chrome,#1a1a1a);border:1px solid rgba(255,255,255,0.2);border-radius:12px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.3);flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;}
