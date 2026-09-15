@@ -1,0 +1,45 @@
+/* Compás — base panel styles (neutral dark theme). Host pages may layer their
+   own theme overrides on top by loading their stylesheet AFTER this one and
+   targeting the same #metro-* ids — see interleaves_v2.html for an example
+   (its E-ink / Clean White overrides are unchanged by this extraction). */
+
+#metro-panel{display:none;position:fixed;bottom:20px;right:20px;width:260px;background:var(--chrome,#1a1a1a);border:1px solid rgba(255,255,255,0.2);border-radius:12px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.3);flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;}
+#metro-panel.show{display:flex;}
+#metro-header{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);gap:8px;cursor:grab;}
+#metro-header:active{cursor:grabbing;}
+#metro-title{font-family:var(--font-mono,monospace);font-size:13px;color:rgba(255,255,255,0.6);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
+#metro-close{background:none;border:none;color:rgba(255,255,255,0.6);font-size:15px;cursor:pointer;padding:4px 6px;}
+#metro-close:hover{color:#fff;}
+#metro-body{padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+#metro-bpm-display{display:flex;align-items:baseline;gap:4px;flex:1;justify-content:center;}
+#metro-bpm{font-family:var(--font-mono,monospace);font-size:26px;font-weight:600;color:rgba(255,255,255,0.95);width:60px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,0.3);text-align:center;outline:none;-moz-appearance:textfield;user-select:text;-webkit-user-select:text;pointer-events:auto;cursor:text;}
+#metro-bpm::-webkit-outer-spin-button,#metro-bpm::-webkit-inner-spin-button{-webkit-appearance:none;}
+#metro-bpm:focus{border-bottom-color:rgba(255,255,255,0.8);}
+#metro-bpm-unit{font-family:var(--font-mono,monospace);font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:.1em;text-transform:uppercase;}
+#metro-dial-wrap{position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none;}
+#metro-dial{display:block;user-select:none;-webkit-user-select:none;}
+#metro-beats-row{display:flex;width:100%;}
+#metro-beat-count-btns{display:flex;gap:4px;width:100%;}
+.metro-count-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius,6px);flex:1;height:32px;cursor:pointer;font-family:var(--font-mono,monospace);font-size:14px;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;}
+.metro-count-btn:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.metro-count-btn.active{background:rgba(255,255,255,0.22);color:#fff;border-color:rgba(255,255,255,0.6);}
+#metro-accent-row{display:flex;gap:5px;justify-content:center;min-height:26px;align-items:center;}
+.metro-accent-btn{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);cursor:pointer;font-family:var(--font-mono,monospace);font-size:11px;color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;}
+.metro-accent-btn:hover{background:rgba(255,255,255,0.18);}
+.metro-accent-btn.beat1{background:rgba(255,255,255,0.9);color:#000;border-color:#fff;cursor:default;}
+.metro-accent-btn.accented{background:rgba(255,255,255,0.45);color:#fff;border-color:rgba(255,255,255,0.8);}
+#metro-controls{display:flex;gap:8px;width:100%;}
+#metro-tap,#metro-start{flex:1;height:40px;border:1px solid rgba(255,255,255,0.25);border-radius:var(--radius,6px);background:none;cursor:pointer;font-family:var(--font-mono,monospace);font-size:15px;color:rgba(255,255,255,0.85);}
+#metro-tap:hover,#metro-start:hover{background:rgba(255,255,255,0.12);color:#fff;}
+#metro-start.running{background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.6);}
+
+/* Generic style for whatever a host page injects into the #metro-passage-row
+   slot — e.g. Interleaves' "Save Compás to [passage]" button. Hosts may
+   still target their injected element by its own id for finer theme control
+   (Interleaves does, for its E-ink/Clean White passes). */
+.compas-slot-btn{width:100%;height:36px;border:1px solid rgba(255,255,255,0.25);border-radius:var(--radius,6px);background:none;cursor:pointer;font-family:var(--font-mono,monospace);font-size:12px;color:rgba(255,255,255,0.75);}
+.compas-slot-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+
+/* Standalone mode: static full-card layout instead of a floating draggable panel */
+#metro-panel.compas-standalone{display:flex;position:static;width:min(340px,92vw);margin:40px auto;bottom:auto;right:auto;}
+#metro-panel.compas-standalone #metro-header{cursor:default;}

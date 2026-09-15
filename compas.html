@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Compás</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="compas.css">
+<style>
+:root{--font-mono:'IBM Plex Mono',monospace;--font-serif:'Spectral',serif;--radius:4px;--chrome:#1a1a1a;}
+html,body{margin:0;padding:0;height:100%;background:#0d0d0d;font-family:var(--font-mono);}
+#page-title{position:fixed;top:20px;left:0;right:0;text-align:center;font-family:var(--font-serif);font-size:22px;color:rgba(255,255,255,0.85);letter-spacing:.04em;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="page-title">Compás</div>
+<div id="metro-mount"></div>
+<script src="compas.js"></script>
+<script>
+  Compas.mount(document.getElementById('metro-mount'),{mode:'standalone'});
+</script>
+</body>
+</html>
