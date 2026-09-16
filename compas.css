@@ -43,3 +43,18 @@
 /* Standalone mode: static full-card layout instead of a floating draggable panel */
 #metro-panel.compas-standalone{display:flex;position:static;width:min(340px,92vw);margin:40px auto;bottom:auto;right:auto;}
 #metro-panel.compas-standalone #metro-header{cursor:default;}
+
+/* Variable Tempo — the "±" indicator is deliberately subtle: no pulse, no
+   color change, just a faint glyph that becomes slightly more visible on a
+   shifted rep. The whole point is the player doesn't consciously track it. */
+#metro-vartempo-indicator{font-family:var(--font-mono,monospace);font-size:11px;color:rgba(255,255,255,0.15);margin-left:2px;transition:color 0.3s ease;}
+#metro-vartempo-indicator.active{color:rgba(255,255,255,0.45);}
+#metro-vartempo-row{display:flex;width:100%;}
+#metro-vartempo-toggle{width:100%;height:34px;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius,6px);background:rgba(255,255,255,0.05);cursor:pointer;font-family:var(--font-mono,monospace);font-size:12px;color:rgba(255,255,255,0.7);}
+#metro-vartempo-toggle:hover{background:rgba(255,255,255,0.12);color:#fff;}
+#metro-vartempo-toggle.active{background:rgba(255,255,255,0.22);color:#fff;border-color:rgba(255,255,255,0.6);}
+#metro-vartempo-sub{display:flex;flex-direction:column;gap:8px;width:100%;}
+#metro-vartempo-range{display:flex;gap:4px;width:100%;}
+#metro-vartempo-range .metro-count-btn{font-size:12px;}
+#metro-replength-row{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.6);font-family:var(--font-mono,monospace);}
+#metro-replength{width:52px;padding:6px;border:1px solid rgba(255,255,255,0.25);border-radius:var(--radius,6px);font-family:var(--font-mono,monospace);font-size:13px;background:none;color:rgba(255,255,255,0.9);}

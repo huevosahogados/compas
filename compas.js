@@ -31,13 +31,23 @@
   const MIN_BPM=40, MAX_BPM=208, LOOKAHEAD=0.1, INTERVAL=25;
 
   let audioCtx=null;
-  let bpm=120, beatsPerBar=4, running=false, currentBeat=0, nextNoteTime=0, scheduleTimer=null;
+  let bpm=120, soundingBpm=120, beatsPerBar=4, running=false, currentBeat=0, nextNoteTime=0, scheduleTimer=null;
   let accents=[true,false,false,false], freeClick=false;
   let beat1Mode='downbeat'; // 'downbeat' | 'accent' | 'plain' — click beat-1 to cycle
   let panelPos=null; // {left,top} in px, null = default corner position
   let tapTimes=[];
   let mode='panel';
   let panelEl=null, dialWrapEl=null, bpmInputEl=null, needleEl=null, accentRowEl=null, startBtnEl=null, countBtnsEl=null, ticksGroupEl=null;
+
+  // ── Variable Tempo state ────────────────────────────────────────────────
+  // bpm above is always the BASE tempo — what's displayed, edited, and saved.
+  // soundingBpm is what the scheduler actually plays; they're equal unless a
+  // shifted rep is in progress. The BPM readout only ever shows `bpm` — never
+  // soundingBpm — by design (see loadSettings/getSettings docs below).
+  let varTempoEnabled=false, varTempoRangeBpm=5;
+  let repLengthBeats=4; // defaults to one bar; editable, or pushed by a host via setRepLength()
+  let repBeatCounter=0, pendingRepAdvance=false;
+  let varTempoToggleEl=null, varTempoRowEl=null, repLengthInputEl=null, varTempoIndicatorEl=null, rangeChipsEl=null;
 
   function clampBpm(v){return Math.max(MIN_BPM,Math.min(MAX_BPM,v));}
 
@@ -82,18 +92,35 @@
     },delay);
   }
 
+  function drawNewSoundingTempo(){
+    const jitter=(Math.random()*2-1)*varTempoRangeBpm; // always drawn from the base (bpm), never from soundingBpm — prevents drift over a long session
+    soundingBpm=clampBpm(Math.round(bpm+jitter));
+    if(varTempoIndicatorEl)varTempoIndicatorEl.classList.toggle('active',soundingBpm!==bpm);
+  }
+  function syncSoundingBpm(){ // called whenever the base tempo changes while Variable Tempo is off
+    if(!varTempoEnabled){soundingBpm=bpm;if(varTempoIndicatorEl)varTempoIndicatorEl.classList.remove('active');}
+  }
+
   function scheduler(){
     const ctx=getAudioContext();
     while(nextNoteTime<ctx.currentTime+LOOKAHEAD){
       scheduleBeat(currentBeat,nextNoteTime);
-      nextNoteTime+=60.0/bpm;
+      nextNoteTime+=60.0/soundingBpm;
       if(freeClick||beatsPerBar===0)currentBeat=0;else currentBeat=(currentBeat+1)%beatsPerBar;
+      if(varTempoEnabled&&!freeClick&&beatsPerBar>0){
+        repBeatCounter++;
+        if(repLengthBeats>0&&repBeatCounter>=repLengthBeats){repBeatCounter=0;pendingRepAdvance=true;}
+        // Only ever change tempo exactly on a downbeat — never mid-bar.
+        if(currentBeat===0&&pendingRepAdvance){pendingRepAdvance=false;drawNewSoundingTempo();}
+      }
     }
   }
 
   function start(){
     const ctx=getAudioContext();
     running=true;currentBeat=0;nextNoteTime=ctx.currentTime+0.05;
+    repBeatCounter=0;pendingRepAdvance=false;
+    if(varTempoEnabled&&!freeClick&&beatsPerBar>0)drawNewSoundingTempo();else soundingBpm=bpm;
     scheduleTimer=setInterval(scheduler,INTERVAL);
     if(startBtnEl){startBtnEl.textContent='stop';startBtnEl.classList.add('running');}
   }
@@ -104,13 +131,18 @@
   function toggle(){if(running)stop();else start();}
 
   // ── Beats / accents ─────────────────────────────────────────────────────
+  function updateVarTempoAvailability(){
+    const row=panelEl&&panelEl.querySelector('#metro-vartempo-row');
+    if(row)row.style.display=freeClick?'none':'flex';
+    if(freeClick&&varTempoEnabled)setVarTempoEnabled(false);
+  }
   function setBeats(n){
     beatsPerBar=n;freeClick=false;
     const prev=accents;
     accents=Array.from({length:n},(_,i)=>i===0?true:(prev[i]||false));
     currentBeat=0;
     if(countBtnsEl)countBtnsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.toggle('active',+b.textContent===n));
-    renderAccentGrid();saveSettings();
+    renderAccentGrid();updateVarTempoAvailability();saveSettings();
   }
   function toggleBeats(n){
     const wasActive=beatsPerBar===n&&!freeClick;
@@ -118,7 +150,7 @@
       freeClick=true;beatsPerBar=0;
       if(countBtnsEl)countBtnsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.remove('active'));
       if(accentRowEl)accentRowEl.innerHTML='';
-      saveSettings();return;
+      updateVarTempoAvailability();saveSettings();return;
     }
     freeClick=false;setBeats(n);
   }
@@ -148,7 +180,7 @@
     const pct=(bpm-MIN_BPM)/(MAX_BPM-MIN_BPM);
     if(needleEl)needleEl.setAttribute('transform','rotate('+(pct*270-135)+' 100 100)');
   }
-  function setBPMFromInput(val){if(isNaN(val))return;bpm=clampBpm(Math.round(val));updateBPMDisplay();saveSettings();}
+  function setBPMFromInput(val){if(isNaN(val))return;bpm=clampBpm(Math.round(val));syncSoundingBpm();updateBPMDisplay();saveSettings();}
   function initDial(){
     let dragging=false;
     function angleFromEvent(e){
@@ -162,11 +194,11 @@
       if(sweep>270)sweep=sweep>315?0:270;
       return Math.round(MIN_BPM+(sweep/270)*(MAX_BPM-MIN_BPM));
     }
-    document.addEventListener('mousedown',e=>{if(dialWrapEl&&dialWrapEl.contains(e.target)){dragging=true;bpm=bpmFromAngle(angleFromEvent(e));updateBPMDisplay();}});
-    document.addEventListener('mousemove',e=>{if(!dragging)return;bpm=bpmFromAngle(angleFromEvent(e));updateBPMDisplay();});
+    document.addEventListener('mousedown',e=>{if(dialWrapEl&&dialWrapEl.contains(e.target)){dragging=true;bpm=bpmFromAngle(angleFromEvent(e));syncSoundingBpm();updateBPMDisplay();}});
+    document.addEventListener('mousemove',e=>{if(!dragging)return;bpm=bpmFromAngle(angleFromEvent(e));syncSoundingBpm();updateBPMDisplay();});
     document.addEventListener('mouseup',()=>{if(dragging){dragging=false;saveSettings();}});
-    document.addEventListener('touchstart',e=>{if(dialWrapEl&&dialWrapEl.contains(e.target)){dragging=true;bpm=bpmFromAngle(angleFromEvent(e));updateBPMDisplay();}},{passive:true});
-    document.addEventListener('touchmove',e=>{if(!dragging)return;bpm=bpmFromAngle(angleFromEvent(e));updateBPMDisplay();},{passive:true});
+    document.addEventListener('touchstart',e=>{if(dialWrapEl&&dialWrapEl.contains(e.target)){dragging=true;bpm=bpmFromAngle(angleFromEvent(e));syncSoundingBpm();updateBPMDisplay();}},{passive:true});
+    document.addEventListener('touchmove',e=>{if(!dragging)return;bpm=bpmFromAngle(angleFromEvent(e));syncSoundingBpm();updateBPMDisplay();},{passive:true});
     document.addEventListener('touchend',()=>{if(dragging){dragging=false;saveSettings();}});
   }
   function tap(){
@@ -176,7 +208,7 @@
     if(tapTimes.length>=2){
       let ti=0;for(let i=1;i<tapTimes.length;i++)ti+=tapTimes[i]-tapTimes[i-1];
       bpm=clampBpm(Math.round(60000/(ti/(tapTimes.length-1))));
-      updateBPMDisplay();saveSettings();
+      syncSoundingBpm();updateBPMDisplay();saveSettings();
     }
   }
   function renderDialTicks(){
@@ -194,7 +226,7 @@
   // ── Persistence (localStorage — the last-used settings, independent of
   //    any host-specific association like Interleaves' Passage linkage) ──
   function saveSettings(){
-    try{localStorage.setItem('compas_settings',JSON.stringify({bpm,beatsPerBar,accents,freeClick,beat1mode:beat1Mode,panelPos}));}catch(e){}
+    try{localStorage.setItem('compas_settings',JSON.stringify({bpm,beatsPerBar,accents,freeClick,beat1mode:beat1Mode,panelPos,varTempoEnabled,varTempoRangeBpm}));}catch(e){}
   }
   function loadSavedSettings(){
     try{
@@ -206,13 +238,35 @@
       if(typeof s.freeClick==='boolean')freeClick=s.freeClick;
       if(s.beat1mode)beat1Mode=s.beat1mode;
       if(s.panelPos&&typeof s.panelPos.left==='number')panelPos=s.panelPos;
+      if(typeof s.varTempoEnabled==='boolean')varTempoEnabled=s.varTempoEnabled;
+      if(typeof s.varTempoRangeBpm==='number')varTempoRangeBpm=s.varTempoRangeBpm;
+      soundingBpm=bpm;
     }catch(e){}
+  }
+
+  // ── Variable Tempo controls ─────────────────────────────────────────────
+  function setVarTempoEnabled(on){
+    varTempoEnabled=!!on;
+    repBeatCounter=0;pendingRepAdvance=false;
+    if(varTempoEnabled&&running&&!freeClick&&beatsPerBar>0)drawNewSoundingTempo();
+    else{soundingBpm=bpm;if(varTempoIndicatorEl)varTempoIndicatorEl.classList.remove('active');}
+    if(varTempoRowEl)varTempoRowEl.style.display=varTempoEnabled?'flex':'none';
+    if(varTempoToggleEl)varTempoToggleEl.classList.toggle('active',varTempoEnabled);
+    saveSettings();
+  }
+  function setVarTempoRange(n){varTempoRangeBpm=n;if(rangeChipsEl)rangeChipsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.toggle('active',+b.dataset.range===n));saveSettings();}
+  // Public: a host can push a computed rep length (e.g. Interleaves: passage.measures × beats).
+  // Compás itself has no notion of measures or passages — this is just a beat count.
+  function setRepLength(beats){
+    if(!beats||beats<1)return;
+    repLengthBeats=Math.round(beats);
+    if(repLengthInputEl)repLengthInputEl.value=repLengthBeats;
   }
 
   // Public: returns a plain settings object a host can persist however it likes
   // (e.g. Interleaves writes this onto a Passage; a future host could store presets).
   function getSettings(){
-    return {bpm,beats:beatsPerBar,accentPattern:accents.slice(),beat1mode:beat1Mode,freeClick,panelPos};
+    return {bpm,beats:beatsPerBar,accentPattern:accents.slice(),beat1mode:beat1Mode,freeClick,panelPos,varTempo:{enabled:varTempoEnabled,rangeBpm:varTempoRangeBpm}};
   }
   // Public: applies a settings object to the live metronome. Never auto-starts.
   function loadSettings(settings){
@@ -224,6 +278,14 @@
       beatsPerBar=settings.beats;
       accents=Array.isArray(settings.accentPattern)?settings.accentPattern.slice():accents;
     }
+    const vt=settings.varTempo||{enabled:false,rangeBpm:5};
+    varTempoEnabled=!!vt.enabled;varTempoRangeBpm=vt.rangeBpm||5;
+    repBeatCounter=0;pendingRepAdvance=false;soundingBpm=bpm;
+    if(varTempoToggleEl)varTempoToggleEl.classList.toggle('active',varTempoEnabled);
+    if(varTempoRowEl)varTempoRowEl.style.display=varTempoEnabled?'flex':'none';
+    if(rangeChipsEl)rangeChipsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.toggle('active',+b.dataset.range===varTempoRangeBpm));
+    if(varTempoIndicatorEl)varTempoIndicatorEl.classList.remove('active');
+    updateVarTempoAvailability();
     updateBPMDisplay();
     if(freeClick){
       if(countBtnsEl)countBtnsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.remove('active'));
@@ -290,6 +352,7 @@
       <div id="metro-bpm-display">
         <input id="metro-bpm" type="number" min="40" max="208" value="120">
         <span id="metro-bpm-unit">bpm</span>
+        <span id="metro-vartempo-indicator" title="Variable Tempo: this rep is shifted">±</span>
       </div>
       <button id="metro-close">✕</button>
     </div>
@@ -325,6 +388,21 @@
         </div>
       </div>
       <div id="metro-accent-row"></div>
+      <div id="metro-vartempo-row">
+        <button id="metro-vartempo-toggle" title="Vary tempo slightly each rep — strengthens learning once a passage is already familiar">🎲 Variable tempo</button>
+      </div>
+      <div id="metro-vartempo-sub" style="display:none;">
+        <div id="metro-vartempo-range">
+          <button class="metro-count-btn" data-range="2">±2</button>
+          <button class="metro-count-btn active" data-range="5">±5</button>
+          <button class="metro-count-btn" data-range="8">±8</button>
+          <button class="metro-count-btn" data-range="10">±10</button>
+        </div>
+        <div id="metro-replength-row">
+          <label for="metro-replength">beats/rep</label>
+          <input id="metro-replength" type="number" min="1" step="1" value="4">
+        </div>
+      </div>
       <div id="metro-controls">
         <button id="metro-tap">tap</button>
         <button id="metro-start">start</button>
@@ -351,6 +429,11 @@
     const headerEl=panelEl.querySelector('#metro-header');
     const tapBtnEl=panelEl.querySelector('#metro-tap');
     const slotEl=panelEl.querySelector('#metro-passage-row');
+    varTempoIndicatorEl=panelEl.querySelector('#metro-vartempo-indicator');
+    varTempoToggleEl=panelEl.querySelector('#metro-vartempo-toggle');
+    varTempoRowEl=panelEl.querySelector('#metro-vartempo-sub');
+    repLengthInputEl=panelEl.querySelector('#metro-replength');
+    rangeChipsEl=panelEl.querySelector('#metro-vartempo-range');
 
     bpmInputEl.addEventListener('change',()=>setBPMFromInput(+bpmInputEl.value));
     bpmInputEl.addEventListener('input',()=>setBPMFromInput(+bpmInputEl.value));
@@ -362,12 +445,24 @@
     countBtnsEl.querySelectorAll('.metro-count-btn').forEach(btn=>{
       btn.addEventListener('click',()=>toggleBeats(+btn.dataset.beats));
     });
+    varTempoToggleEl.addEventListener('click',()=>setVarTempoEnabled(!varTempoEnabled));
+    rangeChipsEl.querySelectorAll('.metro-count-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>setVarTempoRange(+btn.dataset.range));
+    });
+    repLengthInputEl.addEventListener('change',()=>setRepLength(+repLengthInputEl.value));
+    repLengthInputEl.addEventListener('focus',()=>repLengthInputEl.select());
+    repLengthInputEl.addEventListener('click',()=>repLengthInputEl.select());
 
     if(mode==='panel')initPanelDrag(headerEl,closeBtnEl);
     initDial();
 
     loadSavedSettings();
     updateBPMDisplay();
+    varTempoToggleEl.classList.toggle('active',varTempoEnabled);
+    varTempoRowEl.style.display=varTempoEnabled?'flex':'none';
+    rangeChipsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.toggle('active',+b.dataset.range===varTempoRangeBpm));
+    repLengthInputEl.value=repLengthBeats;
+    updateVarTempoAvailability();
     if(freeClick){
       countBtnsEl.querySelectorAll('.metro-count-btn').forEach(b=>b.classList.remove('active'));
     }else{
@@ -386,6 +481,7 @@
     isRunning:()=>running,
     getAudioContext,
     getSettings,
-    loadSettings
+    loadSettings,
+    setRepLength
   };
 })();
